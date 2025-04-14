@@ -1,14 +1,14 @@
-from Private import genai_key
-from Book import Book
+from libraryFunctions.Private import genai_key
+from libraryFunctions.Book import Book
 import requests
 import google.generativeai as genai  # Gemini API Library
-
 
 class BooksCollection:
     # Books Collection Constructor
     def __init__(self):
         self.num_of_books = 0
         self.books = []
+        # self.top3 = [] # Holds the indexs of the top 3 books
 
     # Creating new book object
     def createNewBook(self, title, ISBN, genre):
@@ -115,6 +115,7 @@ class BooksCollection:
         self.num_of_books += 1
 
         print(f"Book added successfully | {new_book.id}")
+        return new_book.id
 
     # GET /books requst: Getting fields and values and return list of all the books corresponeding to the values of the fields
     # The function assumes the fields names are valides (need to be checked in the request handling function!!)
