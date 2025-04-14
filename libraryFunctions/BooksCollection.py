@@ -1,7 +1,7 @@
-import requests
 from Private import genai_key
-import google.generativeai as genai  # Gemini API Library
 from Book import Book
+import requests
+import google.generativeai as genai  # Gemini API Library
 
 
 class BooksCollection:
@@ -21,14 +21,31 @@ class BooksCollection:
             ]  # Extracting the information about the book
         except:
             if google_books_response.json()["totalItems"] == 0:
+                print("ERROR")
                 return {
                     "Error": f"No Items Returnd from Google Books API for this {ISBN}"
                 }
 
-        authors = google_books_data.get("authors")
-        publisher = google_books_data.get("publisher")
-        publishedDate = google_books_data.get("publishedDate")
-        genre = google_books_data.get("categories")
+        authors = (
+            "missing"
+            if google_books_data.get("authors") is None
+            else google_books_data.get("authors")
+        )
+        publisher = (
+            "missing"
+            if google_books_data.get("publisher") is None
+            else google_books_data.get("publisher")
+        )
+        publishedDate = (
+            "missing"
+            if google_books_data.get("publishedDate") is None
+            else google_books_data.get("publishedDate")
+        )
+        genre = (
+            "missing"
+            if google_books_data.get("categories") is None
+            else google_books_data.get("categories")
+        )
 
         # Getting the language from OpenLibrary API
         openLibary_url = f"https://openlibrary.org/search.json?q={ISBN}&fields=key,title,author_name,language"
@@ -41,7 +58,11 @@ class BooksCollection:
                     "Error": f"No Items Returnd from OpenLibrary API for this {ISBN}"
                 }
 
-        language = openLibary_data.get("language")
+        language = (
+            ["missing"]
+            if openLibary_data.get("language") is None
+            else openLibary_data.get("language")
+        )
 
         # Getting the summary from Gemini API
         genai.configure(api_key=genai_key)
@@ -53,7 +74,7 @@ class BooksCollection:
         except:
             return {"Error": f"NO ANSWERED RETURNED FROM GEMINI for this {ISBN}"}
 
-        summary = response.text
+        summary = "missing" if response.text is None else response.text
 
         # Need to create based on some calculation
         id = ISBN
@@ -81,7 +102,7 @@ class BooksCollection:
             return {"Error": f"No Books Exists with id: {id}"}
 
         self.num_of_books -= 1
-        print(f"Book {id} Deleted Successefully.\n")
+        print(f"Book {id} Deleted Successefully.")
 
     # PUT /books/{id} request: Getting book
     def changeBook(self, BookJSON):
@@ -93,8 +114,20 @@ class BooksCollection:
         self.books.append(new_book)
         self.num_of_books += 1
 
-        print(f"Book added successfully | {new_book.id} \n")
+        print(f"Book added successfully | {new_book.id}")
 
     # GET /books requst: Getting fields and values and return list of all the books corresponeding to the values of the fields
-    def getBooksCollection(self, fileds_and_values=[]):
-        print(self.books)
+    # The function assumes the fields names are valides (need to be checked in the request handling function!!)
+    def getBooksCollection(self, filters={}):
+        # filters = {'id': '1', 'publisher': 'smile'} example
+        requested_books = []
+
+        for book in self.books:
+            match = True
+            for field, value in filters.items():
+                if str(getattr(book, field, None)) != str(value):
+                    match = False
+                    break
+            requested_books.append(book.toJson()) if match else None
+
+        return requested_books
