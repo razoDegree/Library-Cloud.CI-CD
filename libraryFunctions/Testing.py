@@ -1,21 +1,52 @@
-from BooksCollection import BooksCollection
+# from BooksCollection import BooksCollection
+from RatingsCollection import RatingsCollection
 
 # ----------------> TESTING
-# CREATING BOOKS COLLECTION
-bookCol = BooksCollection()
+# CREAT COLLECTION
+# bookCol = BooksCollection()
+ratesCol = RatingsCollection()
 
 # ADDING BOOKS
-bookCol.addBook("Exodus", 9780553258479, "History")
-bookCol.addBook("Harry Potter and the Philosopher's Stone", 9781408855652, "Fantasy")
-bookCol.addBook("Hamlet", 9780743477123, "Fiction")
+ratesCol.createRating(1, "Exodus")
+ratesCol.createRating(2, "Harry Potter and the Philosopher's Stone")
+ratesCol.createRating(3, "Hamlet")
+ratesCol.createRating(4, "Exodus")
+ratesCol.createRating(5, "Harry Potter and the Philosopher's Stone")
+ratesCol.createRating(6, "Hamlet")
+ratesCol.createRating(7, "Hamlet")
 
-# GET BOOKS
-# print(bookCol.getBook(9781408855652))
+# ADDING RATING VALUES
+ratesCol.addRatingValue(1, 2)
+ratesCol.addRatingValue(1, 2)
+ratesCol.addRatingValue(1, 2)
 
-# # DELETE BOOKS
-# bookCol.deleteBook(9780553258479)
+ratesCol.addRatingValue(2, 3)
+ratesCol.addRatingValue(2, 3)
+ratesCol.addRatingValue(2, 3)
+ratesCol.addRatingValue(2, 3)
+
+ratesCol.addRatingValue(3, 5)
+ratesCol.addRatingValue(3, 5)
+ratesCol.addRatingValue(3, 5)
+
+ratesCol.addRatingValue(4, 4)
+ratesCol.addRatingValue(4, 4)
+ratesCol.addRatingValue(4, 4)
+
+ratesCol.addRatingValue(5, 5)
+
+ratesCol.addRatingValue(6, 4)
+ratesCol.addRatingValue(6, 4)
+ratesCol.addRatingValue(6, 4)
+
+ratesCol.addRatingValue(7, 4)
+ratesCol.addRatingValue(7, 4)
+ratesCol.addRatingValue(7, 4)
+
+# DELETE RATING
+# ratesCol.deleteRating(1)
 
 # PRINT LIST
-print(bookCol.getBooksCollection())
-print("\n")
-print(bookCol.getBooksCollection({"id": 9781408855652}))
+# print(ratesCol.getRatings())
+# print("\n")
+print(ratesCol.getTop3())

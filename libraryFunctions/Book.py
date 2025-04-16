@@ -1,6 +1,3 @@
-import json
-
-
 class Book:
     def __init__(
         self,
@@ -13,7 +10,6 @@ class Book:
         language,
         summary,
         id,
-        rating=[],
     ):
         self.title = title
         self.authors = authors
@@ -24,8 +20,6 @@ class Book:
         self.language = language
         self.summary = summary
         self.id = id
-        self.rating = rating
-        self.ratingAvg = 0
 
     # Returns the book as JSON object
     def toJson(self):
@@ -40,8 +34,6 @@ class Book:
             "language": self.language,
             "summary": self.summary,
             "id": self.id,
-            "rating": self.rating,
-            "ratingAvg": self.ratingAvg,
         }
 
     def toString(self):

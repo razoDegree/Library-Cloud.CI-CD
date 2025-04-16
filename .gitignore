@@ -1,2 +1,3 @@
 libraryFunctions/apiTest.py
 libraryFunctions/Private.py
+*.pyc

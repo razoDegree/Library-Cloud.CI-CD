@@ -9,7 +9,6 @@ class BooksCollection:
     def __init__(self):
         self.num_of_books = 0
         self.books = []
-        # self.top3 = [] # Holds the indexs of the top 3 books
 
     def createNewBook(self, title, ISBN, genre):
         """
@@ -113,12 +112,12 @@ class BooksCollection:
 
         self.num_of_books -= 1
         return {"Success": f"Book {id} deleted Successefully"}
-  
+
     def changeBook(self, book_data, id):
         """
         PUT /books/{id} request: Getting book data and book id and update the book data
         """
-        
+
         # Check if the Book exists
         update_book = self.getBook(id)
         if not isinstance(update_book, Book):
