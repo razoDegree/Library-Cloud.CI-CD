@@ -5,17 +5,33 @@ import google.generativeai as genai  # Gemini API Library
 
 
 class BooksCollection:
-    # Books Collection Constructor
+    """
+    A class to manage a collection of Book objects, allowing creation, retrieval, update,
+    deletion, and filtering of books using external APIs for metadata enrichment.
+    """
+
     def __init__(self):
-        self.num_of_books = 0
+        """
+        Initializes an empty collection of books.
+
+        Attributes:
+            num_of_books (int): Total number of books in the collection.
+            books (list): List that holds Book objects.
+        """
         self.books = []
 
     def createNewBook(self, title, ISBN, genre):
         """
-        Creating new Book object
+        Creates a new Book object using metadata from Google Books, OpenLibrary, and Gemini APIs.
 
-        return:
-            Book Object
+        Args:
+            title (str): Title of the book.
+            ISBN (str): ISBN identifier of the book.
+            genre (str): Genre of the book.
+
+        Returns:
+            Book: A Book object with populated data.
+            dict: Error message if data retrieval fails.
         """
         # Getting the authors, publisher, publishedDate from Google Books API
         google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}"
@@ -30,11 +46,9 @@ class BooksCollection:
                     "Error": f"No Items Returnd from Google Books API for this {ISBN}"
                 }
 
-        authors = (
-            "missing"
-            if google_books_data.get("authors") is None
-            else google_books_data.get("authors")
-        )
+        authors_list = google_books_data.get("authors", ["missing"])
+        authors = " and ".join(authors_list)
+
         publisher = (
             "missing"
             if google_books_data.get("publisher") is None
@@ -85,10 +99,14 @@ class BooksCollection:
 
     def getBook(self, id):
         """
-        GET /books/{id} request: Getting book id, return it from the list of the books
+        Retrieves a Book object from the collection by ID.
 
-        return:
-            Book Object
+        Args:
+            id (str or int): The ID of the book to retrieve.
+
+        Returns:
+            Book: The requested Book object.
+            dict: Error message if book not found.
         """
         asked_book = next(
             (book for book in self.books if str(book.id) == str(id)), None
@@ -100,7 +118,13 @@ class BooksCollection:
 
     def deleteBook(self, id):
         """
-        DELETE /books/{id} request: Getting book id, delete it from the list of the books
+        Deletes a Book object from the collection by ID.
+
+        Args:
+            id (str or int): The ID of the book to delete.
+
+        Returns:
+            dict: Success or error message.
         """
         try:
             book_to_delete = next(
@@ -115,7 +139,14 @@ class BooksCollection:
 
     def changeBook(self, book_data, id):
         """
-        PUT /books/{id} request: Getting book data and book id and update the book data
+        Updates fields of an existing Book object.
+
+        Args:
+            book_data (dict): Dictionary of field names and new values.
+            id (str or int): The ID of the book to update.
+
+        Returns:
+            dict: Success or error message.
         """
 
         # Check if the Book exists
@@ -136,10 +167,14 @@ class BooksCollection:
 
     def addBook(self, title, ISBN, genre):
         """
-        POST /books request: Getting title, ISBN-13, genre of a book and add a new book to the list of books
+        Updates fields of an existing Book object.
 
-        return:
-            new Book id as String
+        Args:
+            book_data (dict): Dictionary of field names and new values.
+            id (str or int): The ID of the book to update.
+
+        Returns:
+            dict: Success or error message.
         """
         new_book = self.createNewBook(title, ISBN, genre)
 
@@ -153,8 +188,13 @@ class BooksCollection:
 
     def getBooksCollection(self, filters={}):
         """
-        GET /books requst: Getting fields and values and return list of all the books corresponeding to the values of the fields
-        filters = {'id': '1', 'publisher': 'smile'} example
+        Retrieves all books that match given filter criteria.
+
+        Args:
+            filters (dict): Dictionary of field-value pairs to filter the books (e.g. {"genre": "fiction"}).
+
+        Returns:
+            list: A list of books (in JSON form) matching the filter.
         """
 
         requested_books = []

@@ -18,7 +18,7 @@ class BookList(Resource):
         try:
             data = request.get_json()
         except:
-            return {"error": "Wrong data type (Unsupported media type)"}, 415
+            return {"Error": "Wrong data type (Unsupported media type)"}, 415
 
         # Check if the fields are valid in the request
         try:
@@ -26,16 +26,16 @@ class BookList(Resource):
             ISBN = data["ISBN"]
             genre = data["genre"]
         except:
-            return {"error": "Unable to process the request"}, 422
+            return {"Error": "Unable to process the request"}, 422
 
         # Check if there is already book with the same ISBN
         if not isinstance(booksCol.getBook(ISBN), dict):
-            return {"error": f"Book already exists with ISBN: {ISBN}"}, 422
+            return {"Error": f"Book already exists with ISBN: {ISBN}"}, 422
 
         # Add the book and Check if succeed
         new_book_id = booksCol.addBook(title, ISBN, genre)
         if str(new_book_id) != str(ISBN):
-            return {"error": str(new_book_id)}, 500
+            return {"Error": str(new_book_id)}, 500
 
         # Create a /rating/{id} endpoint
         ratingsCol.createRating(new_book_id, title)
@@ -61,7 +61,7 @@ class Book(Resource):
         try:
             data = request.get_json()
         except:
-            return {"error": "Wrong data type (Unsupported media type)"}, 415
+            return {"Error": "Wrong data type (Unsupported media type)"}, 415
 
         res = booksCol.changeBook(data, id)
         if "Error" in res:
@@ -93,13 +93,13 @@ class Rating(Resource):
         try:
             data = request.get_json()
         except:
-            return {"error": "Wrong data type (Unsupported media type)"}, 415
+            return {"Error": "Wrong data type (Unsupported media type)"}, 415
 
         # Check if the fields are valid in the request
         try:
             value = data["value"]
         except:
-            return {"error": "Unable to process the request"}, 422
+            return {"Error": "Unable to process the request"}, 422
 
         # Add the rating
         res = ratingsCol.addRatingValue(id, value)
@@ -115,12 +115,12 @@ class Rating(Resource):
         return resulte.toJson(), 200
 
 
-class top3(Resource):
+class Top3(Resource):
     def get(self):
         return ratingsCol.getTop3()
     
 
-api.add_resource(top3, "/top")
+api.add_resource(Top3, "/top")
 api.add_resource(Rating, "/ratings/<string:id>")
 api.add_resource(Ratings, "/ratings")
 api.add_resource(BookList, "/books")
