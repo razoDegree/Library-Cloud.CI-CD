@@ -182,7 +182,6 @@ class BooksCollection:
             return new_book["Error"]
         else:
             self.books.append(new_book)
-            self.num_of_books += 1
 
         return new_book.id
 
