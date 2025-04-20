@@ -1,0 +1,11 @@
+__pycache__/
+.vscode/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+.git
+venv/
+libraryFunctions/apiTest.py
+libraryFunctions/Testing.py
