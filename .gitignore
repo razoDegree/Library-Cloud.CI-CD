@@ -1,6 +1,3 @@
-__pycache__/
-libraryFunctions/apiTest.py
-libraryFunctions/Private.py
 *.pyc
 venv
 *.pyo
