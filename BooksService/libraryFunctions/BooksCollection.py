@@ -1,7 +1,8 @@
 from libraryFunctions.Private import genai_key
-from libraryFunctions.Book import Book
 import requests
 import google.generativeai as genai  # Gemini API Library
+from pymongo import MongoClient
+
 
 
 class BooksCollection:
@@ -18,11 +19,15 @@ class BooksCollection:
             num_of_books (int): Total number of books in the collection.
             books (list): List that holds Book objects.
         """
-        self.books = []
+
+        uri = "mongodb://mongo:27017/"
+        self.client = MongoClient(uri)
+        self.database = self.client["library"]
+        self.books_col = self.database["books_collection"]
 
     def createNewBook(self, title, ISBN, genre):
         """
-        Creates a new Book object using metadata from Google Books, OpenLibrary, and Gemini APIs.
+        Creates a new Book document using metadata from Google Books, OpenLibrary, and Gemini APIs.
 
         Args:
             title (str): Title of the book.
@@ -30,95 +35,100 @@ class BooksCollection:
             genre (str): Genre of the book.
 
         Returns:
-            Book: A Book object with populated data.
-            dict: Error message if data retrieval fails.
+            dict: New book document ready for insertion, or error message.
         """
-        # Getting the authors, publisher, publishedDate from Google Books API
-        google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}"
-        google_books_response = requests.get(google_books_url)
+        # ------------------ Google Books API ------------------
         try:
-            google_books_data = google_books_response.json()["items"][0][
-                "volumeInfo"
-            ]  # Extracting the information about the book
-        except:
-            if google_books_response.json()["totalItems"] == 0:
-                return {
-                    "Error": f"No Items Returnd from Google Books API for this {ISBN}"
-                }
+            google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}"
+            google_books_response = requests.get(google_books_url).json()
+            google_data = google_books_response["items"][0]["volumeInfo"]
+        except Exception:
+            return {"Error": f"No data returned from Google Books API for ISBN {ISBN}"}
 
-        authors_list = google_books_data.get("authors", ["missing"])
-        authors = " and ".join(authors_list)
+        authors = " and ".join(google_data.get("authors", ["missing"]))
+        publisher = google_data.get("publisher", "missing")
+        published_date = google_data.get("publishedDate", "missing")
 
-        publisher = (
-            "missing"
-            if google_books_data.get("publisher") is None
-            else google_books_data.get("publisher")
-        )
-        publishedDate = (
-            "missing"
-            if google_books_data.get("publishedDate") is None
-            else google_books_data.get("publishedDate")
-        )
-
-        # Getting the language from OpenLibrary API
-        openLibary_url = f"https://openlibrary.org/search.json?q={ISBN}&fields=key,title,author_name,language"
-        openLibary_response = requests.get(openLibary_url)
+        # ------------------ OpenLibrary API ------------------
         try:
-            openLibary_data = openLibary_response.json()["docs"][0]
-        except:
-            if openLibary_response.json()["numFound"] == 0:
-                return {
-                    "Error": f"No answer returnd from OpenLibrary API for ISBN num: {ISBN}"
-                }
+            openlib_url = f"https://openlibrary.org/search.json?q={ISBN}&fields=language"
+            openlib_data = requests.get(openlib_url).json()
+            language = openlib_data["docs"][0].get("language", ["missing"])
+        except Exception:
+            language = ["missing"]
 
-        language = (
-            ["missing"]
-            if openLibary_data.get("language") is None
-            else openLibary_data.get("language")
-        )
-
-        # Getting the summary from Gemini API
-        genai.configure(api_key=genai_key)
-        model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+        # ------------------ Gemini API ------------------
         try:
+            genai.configure(api_key=genai_key)
+            model = genai.GenerativeModel(model_name="gemini-2.0-flash")
             response = model.generate_content(
                 f'Summarize the book "{title}" by {authors} in 5 sentences or less.'
             )
-        except:
-            return {"Error": f"No answer returned from GEMINI for ISBN num: {ISBN}"}
+            summary = response.text or "missing"
+        except Exception:
+            summary = "missing"
 
-        summary = "missing" if response.text is None else response.text
+        # ------------------ Final Book Document ------------------
+        return {
+            "id": str(ISBN),  # Assuming ISBN is the unique ID
+            "title": title,
+            "authors": authors,
+            "ISBN": ISBN,
+            "publisher": publisher,
+            "publishedDate": published_date,
+            "genre": genre,
+            "language": language,
+            "summary": summary
+        }
 
-        # Need to create based on some calculation
-        id = str(ISBN)
 
-        newBook = Book(
-            title, authors, ISBN, publisher, publishedDate, genre, language, summary, id
-        )
-        return newBook
+    def addBook(self, title, ISBN, genre):
+        """
+        Creates a new book and inserts it into the MongoDB collection.
+
+        Args:
+            title (str): Book title.
+            ISBN (str): Book ISBN (used as unique ID).
+            genre (str): Book genre.
+
+        Returns:
+            str: ID of the created book or error message.
+        """
+        # Check for duplicate
+        if self.books_col.find_one({"id": str(ISBN)}):
+            return f"Book already exists with ISBN: {ISBN}"
+
+        # Create enriched book document
+        new_book = self.createNewBook(title, ISBN, genre)
+
+        if "Error" in new_book:
+            return new_book["Error"]
+
+        # Insert into collection
+        self.books_col.insert_one(new_book)
+
+        return new_book["id"]
 
     def getBook(self, id):
         """
-        Retrieves a Book object from the collection by ID.
+        Retrieves a Book from the collection by ID.
 
         Args:
             id (str or int): The ID of the book to retrieve.
 
         Returns:
-            Book: The requested Book object.
-            dict: Error message if book not found.
+            dict: The requested Book document.
         """
-        asked_book = next(
-            (book for book in self.books if str(book.id) == str(id)), None
-        )
-        if asked_book != None:
-            return asked_book
+        book = self.books_col.find_one({"id": str(id)}, {"_id": 0})
+
+        if book:
+            return book
         else:
-            return {"Error": f"No Books Exists with id: {id}"}
+            return {"Error": f"No Book Exists with id: {id}"}
 
     def deleteBook(self, id):
         """
-        Deletes a Book object from the collection by ID.
+        Deletes a Book from the collection by ID.
 
         Args:
             id (str or int): The ID of the book to delete.
@@ -126,64 +136,51 @@ class BooksCollection:
         Returns:
             dict: Success or error message.
         """
-        try:
-            book_to_delete = next(
-                (book for book in self.books if book.id == str(id)), None
-            )
-            self.books.remove(book_to_delete)
-        except:
-            return {"Error": f"No Books Exists with id: {id}"}
+        result = self.books_col.delete_one({"id": str(id)})
 
-        self.num_of_books -= 1
-        return {"Success": f"Book {id} deleted Successefully"}
+        if result.deleted_count == 0:
+            return {"Error": f"No Book Exists with id: {id}"}
 
-    def changeBook(self, book_data, id):
+        return {"Success": f"Book {id} deleted successfully"}
+
+    def changeBook(self, book_data, book_id):
         """
-        Updates fields of an existing Book object.
+        Updates fields of an existing book document in MongoDB.
 
         Args:
             book_data (dict): Dictionary of field names and new values.
-            id (str or int): The ID of the book to update.
+            book_id (str or int): The ID of the book to update.
 
         Returns:
             dict: Success or error message.
         """
 
-        # Check if the Book exists
-        update_book = self.getBook(id)
-        if not isinstance(update_book, Book):
-            return update_book
+        # Check if book exists
+        existing = self.books_col.find_one({"id": str(book_id)})
+        if not existing:
+            return {"Error": f"No Books Exists with id: {book_id}"}
 
-        # Check if the fields are valid
-        for field, value in book_data.items():
-            if not hasattr(update_book, field):
-                return {"Error": f"Field {field} is not a book field"}
+        # (Optional) check for allowed fields
+        allowed_fields = {
+            "title",
+            "authors",
+            "publisher",
+            "publishedDate",
+            "genre",
+            "language",
+            "summary",
+        }
+        for field in book_data:
+            if field not in allowed_fields:
+                return {"Error": f"Field {field} is not a valid book field"}
 
-        # Update the values
-        for field, value in book_data.items():
-            setattr(update_book, field, value)
+        # Update the document in Mongo
+        result = self.books_col.update_one({"id": str(book_id)}, {"$set": book_data})
 
-        return {"Success": f"Book {update_book.id} updated successfully."}
+        if result.modified_count == 0:
+            return {"Error": "Update failed or no changes made"}
 
-    def addBook(self, title, ISBN, genre):
-        """
-        Updates fields of an existing Book object.
-
-        Args:
-            book_data (dict): Dictionary of field names and new values.
-            id (str or int): The ID of the book to update.
-
-        Returns:
-            dict: Success or error message.
-        """
-        new_book = self.createNewBook(title, ISBN, genre)
-
-        if not isinstance(new_book, Book):
-            return new_book["Error"]
-        else:
-            self.books.append(new_book)
-
-        return new_book.id
+        return {"Success": f"Book {book_id} updated successfully."}
 
     def getBooksCollection(self, filters={}):
         """
@@ -193,32 +190,14 @@ class BooksCollection:
             filters (dict): Dictionary of field-value pairs to filter the books (e.g. {"genre": "fiction"}).
 
         Returns:
-            list: A list of books (in JSON form) matching the filter.
+            list: A list of books (as plain dicts) matching the filter.
         """
+        
+        # convert string values if needed, MongoDB stores values as their real types
+        query = {k: v for k, v in filters.items()}
 
-        requested_books = []
-
-        for book in self.books:
-            match = True
-            for field, value in filters.items():
-                if not hasattr(book, field):
-                    match = False
-                    break
-
-                field_value = getattr(book, field)
-
-                # If it's a list → check if value is in it
-                if isinstance(field_value, list):
-                    if value not in field_value:
-                        match = False
-                        break
-                else:
-                    # Regular value → check exact match
-                    if str(field_value) != str(value):
-                        match = False
-                        break
-
-            if match:
-                requested_books.append(book.toJson())
-
-        return requested_books
+        # execute the query
+        books_cursor = self.books_col.find(query, {"_id": 0})  # exclude _id
+    
+        # convert cursor to list
+        return list(books_cursor)

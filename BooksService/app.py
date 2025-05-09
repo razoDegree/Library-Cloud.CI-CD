@@ -29,7 +29,7 @@ class BookList(Resource):
             return {"Error": "Unable to process the request"}, 422
 
         # Check if there is already book with the same ISBN
-        if not isinstance(booksCol.getBook(ISBN), dict):
+        if not "Error" in booksCol.getBook(ISBN):
             return {"Error": f"Book already exists with ISBN: {ISBN}"}, 422
 
         # Add the book and Check if succeed
@@ -48,7 +48,7 @@ class Book(Resource):
         requested_book = booksCol.getBook(id)
         if isinstance(requested_book, dict) and "Error" in requested_book:
             return requested_book, 404
-        return requested_book.toJson(), 202
+        return requested_book, 202
 
     def delete(self, id):
         result_books = booksCol.deleteBook(id)
@@ -127,4 +127,4 @@ api.add_resource(BookList, "/books")
 api.add_resource(Book, "/books/<string:id>")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
