@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    expose:
+      - "27017"
+
+  books:
+    build: ./BooksService
+    container_name: books
+    ports:
+      - "5001:5000"
+    depends_on:
+      - mongo
+
+  loans:
+    build: ./LoansService
+    container_name: loans
+    ports:
+      - "5002:5000"
+    depends_on:
+      - mongo
+      - books
