@@ -7,35 +7,32 @@ from pymongo import MongoClient
 
 class BooksCollection:
     """
-    A class to manage a collection of Book objects, allowing creation, retrieval, update,
-    deletion, and filtering of books using external APIs for metadata enrichment.
+    Manages a MongoDB collection of books, allowing creation, retrieval,
+    updating, deletion, and filtering using metadata enrichment from external APIs.
     """
 
     def __init__(self):
         """
-        Initializes an empty collection of books.
-
-        Attributes:
-            num_of_books (int): Total number of books in the collection.
-            books (list): List that holds Book objects.
+        Initializes a MongoDB connection and sets a reference to the 'books' collection.
         """
 
         uri = "mongodb://mongo:27017/"
         self.client = MongoClient(uri)
         self.database = self.client["library"]
-        self.books_col = self.database["books_collection"]
+        self.books_col = self.database["books"]
 
     def createNewBook(self, title, ISBN, genre):
         """
-        Creates a new Book document using metadata from Google Books, OpenLibrary, and Gemini APIs.
+        Constructs a new book document enriched with metadata from Google Books,
+        OpenLibrary, and Gemini APIs.
 
         Args:
             title (str): Title of the book.
-            ISBN (str): ISBN identifier of the book.
+            ISBN (str): ISBN of the book (used as a unique identifier).
             genre (str): Genre of the book.
 
         Returns:
-            dict: New book document ready for insertion, or error message.
+            dict: A complete book document or an error message.
         """
         # ------------------ Google Books API ------------------
         try:
@@ -84,15 +81,15 @@ class BooksCollection:
 
     def addBook(self, title, ISBN, genre):
         """
-        Creates a new book and inserts it into the MongoDB collection.
+        Creates and inserts a new book into the collection if it doesn't already exist.
 
         Args:
             title (str): Book title.
-            ISBN (str): Book ISBN (used as unique ID).
+            ISBN (str): Book ISBN.
             genre (str): Book genre.
 
         Returns:
-            str: ID of the created book or error message.
+            str: The book ID or an error message.
         """
         # Check for duplicate
         if self.books_col.find_one({"id": str(ISBN)}):
@@ -111,13 +108,13 @@ class BooksCollection:
 
     def getBook(self, id):
         """
-        Retrieves a Book from the collection by ID.
+        Retrieves a book by its ID.
 
         Args:
-            id (str or int): The ID of the book to retrieve.
+            id (str or int): Book ID.
 
         Returns:
-            dict: The requested Book document.
+            dict: Book document or an error message.
         """
         book = self.books_col.find_one({"id": str(id)}, {"_id": 0})
 
@@ -128,10 +125,10 @@ class BooksCollection:
 
     def deleteBook(self, id):
         """
-        Deletes a Book from the collection by ID.
+        Deletes a book by its ID.
 
         Args:
-            id (str or int): The ID of the book to delete.
+            id (str or int): Book ID.
 
         Returns:
             dict: Success or error message.
@@ -145,11 +142,11 @@ class BooksCollection:
 
     def changeBook(self, book_data, book_id):
         """
-        Updates fields of an existing book document in MongoDB.
+        Updates fields of an existing book document.
 
         Args:
-            book_data (dict): Dictionary of field names and new values.
-            book_id (str or int): The ID of the book to update.
+            book_data (dict): Fields to update (e.g., {"genre": "fiction"}).
+            book_id (str or int): Book ID.
 
         Returns:
             dict: Success or error message.
@@ -184,13 +181,13 @@ class BooksCollection:
 
     def getBooksCollection(self, filters={}):
         """
-        Retrieves all books that match given filter criteria.
+        Retrieves books that match the specified filters.
 
         Args:
-            filters (dict): Dictionary of field-value pairs to filter the books (e.g. {"genre": "fiction"}).
+            filters (dict): Filter criteria (e.g., {"genre": "fiction"}).
 
         Returns:
-            list: A list of books (as plain dicts) matching the filter.
+            list: List of matching books (excluding the _id field).
         """
         
         # convert string values if needed, MongoDB stores values as their real types

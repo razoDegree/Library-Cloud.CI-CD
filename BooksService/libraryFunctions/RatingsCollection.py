@@ -1,41 +1,46 @@
-from libraryFunctions.Rating import Rating
+from pymongo import MongoClient
 
 
 class RatingsCollection:
     """
-    A class to manage a collection of book ratings, allowing creation, update,
-    deletion, and retrieval of rating data. Each rating is linked to a book ID.
+    Manages a MongoDB collection of book ratings.
+    Provides functionality to create, update, delete, and retrieve rating data.
+    Each rating is linked to a book by its ID.
     """
 
     def __init__(self):
         """
-        Initializes an empty list of ratings.
-
-        Attributes:
-            ratings (list): A list of Rating objects.
+        Initializes the MongoDB connection and references the 'ratings' collection.
         """
-        self.ratings = []  # Holds the list of Rating Object
+        uri = "mongodb://mongo:27017/"
+        self.client = MongoClient(uri)
+        self.database = self.client["library"]
+        self.ratings_col = self.database["ratings"]
 
     def createRating(self, id, title):
         """
-        Creates a new Rating object for a specific book.
+        Creates a new rating entry for a book.
 
         Args:
-            id (str or int): The book's identifier.
-            title (str): The title of the book.
-
-        Returns:
-            None
+            id (str or int): Book identifier.
+            title (str): Title of the book.
         """
-        self.ratings.append(Rating(id, title))
+        new_rating = {
+            "id": id,
+            "title": title,
+            "average": 0,
+            "values": [],
+        }
+
+        self.ratings_col.insert_one(new_rating)
 
     def addRatingValue(self, id, value):
         """
-        Adds a numeric rating (1-5) to a specific book and updates the average.
+        Adds a rating value (1–5) to a specific book and updates its average.
 
         Args:
-            id (str or int): The ID of the book to rate.
-            value (int): The rating value (must be between 1 and 5).
+            id (str or int): Book ID.
+            value (int): Rating value (must be between 1 and 5).
 
         Returns:
             dict: Success or error message.
@@ -45,67 +50,69 @@ class RatingsCollection:
             return {"Error": "Value is not valid"}
 
         # Find the book
-        rating_required = self.getRating(id)
-        if not isinstance(rating_required, Rating):
-            return rating_required
+        if not self.ratings_col.find_one({"id": str(id)}):
+            return []
 
         # Update the values
-        rating_required.values.append(value)
-
-        # Calculate avg.
-        prev_avg = rating_required.average
-        values_len = len(rating_required.values)
-        rating_required.average = round(
-            sum(rating_required.values) / len(rating_required.values), 2
+        result = self.ratings_col.update_one(
+            {"id": str(id)}, {"$push": {"values": value}}
         )
 
-        return {"Success": f"Book {id} avg. rating is {rating_required.average}"}
+        if result.modified_count == 0:
+            return {"Error": "Update failed or no changes made"}
+
+        # Calculate avg.
+        rating_values = self.ratings_col.find_one({"id": str(id)})["values"]
+        values_len = len(rating_values)
+
+        average = round(sum(rating_values) / values_len, 2)
+        result = self.ratings_col.update_one(
+            {"id": str(id)}, {"$set": {"average": average}}
+        )
+
+        if result.modified_count == 0:
+            return {"Error": "Update failed or no changes made"}
+
+        return {"Success": f"Book {id} avg. rating is {average}"}
 
     def deleteRating(self, id):
         """
-        Deletes the rating data for a specific book.
+        Deletes the rating entry for a specific book.
 
         Args:
-            id (str or int): The ID of the book whose rating is to be deleted.
+            id (str or int): Book ID.
 
         Returns:
             dict: Success or error message.
         """
         # Find the book
-        rating_required = self.getRating(id)
-        if not isinstance(rating_required, Rating):
-            return rating_required
+        if not self.ratings_col.find_one({"id": str(id)}):
+            return []
 
-        self.ratings.remove(rating_required)
+        self.ratings_col.delete_one({"id": str(id)})
         return {"Success": f"Book rating {id} deleted succesfully."}
 
     def getRatings(self):
         """
-        Retrieves all ratings in the system in JSON format.
+        Retrieves all book ratings.
 
         Returns:
-            list: A list of all book ratings as JSON.
+            list: List of all ratings (excluding MongoDB internal _id field).
         """
-        requested_rates = []
-
-        for book_rate in self.ratings:
-            requested_rates.append(book_rate.toJson())
-
-        return requested_rates
+        return list(self.ratings_col.find({}, {"_id": 0}))
 
     def getRating(self, id):
         """
-        Retrieves a specific book's rating object by ID.
+        Retrieves the rating details of a specific book.
 
         Args:
-            id (str or int): The ID of the book.
+            id (str or int): Book ID.
 
         Returns:
-            Rating: The corresponding Rating object.
-            dict: Error message if not found.
+            dict: Book rating data or error message.
         """
         # Find the book
-        book_required = next((r for r in self.ratings if str(r.id) == str(id)), None)
+        book_required = self.ratings_col.find_one({"id": id}, {"_id": 0})
         if not book_required:
             return {"Error": "Book does not exist"}
         return book_required
@@ -113,25 +120,52 @@ class RatingsCollection:
     def getTop3(self):
         """
         Retrieves the top 3 books with the highest average rating,
-        where each has at least 3 ratings.
+        only including books with at least 3 ratings.
+        If there is a tie at the cutoff, includes all tied books.
 
         Returns:
-            list: A list of top 3 rated books in JSON format.
+            list: Top-rated books sorted by average rating.
         """
-        eligible = [r for r in self.ratings if len(r.values) >= 3]
-        if not eligible:
+        pipeline = [
+            {
+                "$project": {
+                    "id": 1,
+                    "values": 1,
+                    "average": { "$avg": "$values" },
+                    "count": { "$size": "$values" }
+                }
+            },
+            {
+                "$match": { "count": { "$gte": 3 } }
+            },
+            {
+                "$sort": { "average": -1 }
+            }
+        ]
+
+        results = list(self.ratings_col.aggregate(pipeline))
+
+        if not results:
             return []
 
-        eligible.sort(key=lambda r: r.average, reverse=True)
+        # Get top 3 and include ties
         top3 = []
         cutoff = None
-
-        for r in eligible:
+        for r in results:
             if len(top3) < 3:
-                top3.append(r.toJsonTop3())
-                cutoff = r.average
-            elif r.average == cutoff:
-                top3.append(r.toJsonTop3())
+                top3.append({
+                    "id": r["id"],
+                    "average": r["average"],
+                    "count": r["count"]
+                })
+                cutoff = r["average"]
+            elif r["average"] == cutoff:
+                top3.append({
+                    "id": r["id"],
+                    "average": r["average"],
+                    "count": r["count"]
+                })
             else:
                 break
+
         return top3
