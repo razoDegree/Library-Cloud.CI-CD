@@ -191,7 +191,7 @@ class BooksCollection:
         """
         
         # convert string values if needed, MongoDB stores values as their real types
-        query = {k: v for k, v in filters.items()}
+        query = {k: int(v) if k == 'ISBN' else str(v) for k, v in filters.items()}
 
         # execute the query
         books_cursor = self.books_col.find(query, {"_id": 0})  # exclude _id
