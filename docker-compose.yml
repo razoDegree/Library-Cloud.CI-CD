@@ -14,12 +14,36 @@ services:
       - "5001:5000"
     depends_on:
       - mongo
+    expose:
+      - "5000"
 
-  loans:
+  loans_major:
     build: ./LoansService
-    container_name: loans
+    container_name: loans_major
     ports:
-      - "5002:5000"
+      - "5002:5001"
     depends_on:
       - mongo
       - books
+
+  loans_minor:
+    build: ./LoansService
+    container_name: loans_minor
+    ports:
+      - "5003:5001"
+    depends_on:
+      - mongo
+      - books
+
+  nginx:
+      image: nginx
+      container_name: nginx-proxy
+      ports:
+        - "80:8000"
+      volumes:
+        - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      depends_on:
+        - books
+        - loans_major
+        - loans_minor
+      restart: always
