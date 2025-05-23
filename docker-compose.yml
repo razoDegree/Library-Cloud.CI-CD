@@ -11,7 +11,6 @@ services:
       - backend
   books:
     build: ./BooksService
-    container_name: books
     ports:
       - "5001:5001"
     depends_on:
