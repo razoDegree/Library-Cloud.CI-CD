@@ -3,9 +3,9 @@ import requests
 BASE_URL = "http://localhost:5000/books"
 
 book = {
-    "title": "1984",
-    "ISBN": "9780451524935",
-    "genre": "Dystopian"
+    "title": "Second Foundation",
+    "ISBN": "9780553293364",
+    "genre": "Science Fiction"
 }
 
 def test_post_book():
