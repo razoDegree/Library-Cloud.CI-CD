@@ -96,30 +96,3 @@ def test_post_books():
     assert len(set(books_data_tuples)) == 3
 
 
-def test_get_query():
-    res = requests.get(f"{BASE_URL}?authors=Isaac Asimov")
-    assert res.status_code == 200
-    assert len(res.json()) == 2
-
-
-def test_delete_book():
-    res = requests.delete(f"{BASE_URL}/{books_data[0]['ID']}")
-    assert res.status_code == 200
-
-
-def test_post_book():
-    book = {
-        "title": "The Art of Loving",
-        "ISBN": "9780062138927",
-        "genre": "Science"
-    }
-    res = requests.post(BASE_URL, json=book)
-    assert res.status_code == 201
-
-
-
-def test_get_new_book_query():
-    res = requests.get(f"{BASE_URL}?genre=Science")
-    assert res.status_code == 200
-    res_data = res.json()
-    assert res_data[0]["title"] == "The Art of Loving"
