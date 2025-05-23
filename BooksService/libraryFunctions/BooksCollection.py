@@ -55,15 +55,7 @@ class BooksCollection:
             language = ["missing"]
 
         # ------------------ Gemini API ------------------
-        try:
-            genai.configure(api_key=genai_key)
-            model = genai.GenerativeModel(model_name="gemini-2.0-flash")
-            response = model.generate_content(
-                f'Summarize the book "{title}" by {authors} in 5 sentences or less.'
-            )
-            summary = response.text or "missing"
-        except Exception:
-            summary = "missing"
+        summary = "missing"
 
         # ------------------ Final Book Document ------------------
         return {
