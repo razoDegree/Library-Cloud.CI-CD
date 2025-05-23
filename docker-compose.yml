@@ -7,7 +7,8 @@ services:
       - "27017:27017"
     expose:
       - "27017"
-
+    networks:
+      - backend
   books:
     build: ./BooksService
     container_name: books
@@ -18,3 +19,6 @@ services:
     restart: always
     expose:
       - "5001"
+networks:
+  backend:
+    driver: bridge
