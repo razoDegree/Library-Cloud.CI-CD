@@ -1,3 +1,4 @@
+import pytest
 import requests
 
 BASE_URL = "http://localhost:5000/books"
@@ -8,24 +9,22 @@ book = {
     "genre": "Science Fiction"
 }
 
-def test_post_book():
+@pytest.fixture(scope="module")
+def posted_book():
     res = requests.post(BASE_URL, json=book)
     assert res.status_code == 201
-    data = res.json()
-    assert "ID" in data
-    global book_id
-    book_id = data["ID"]
+    return res.json()["ID"]
 
-def test_get_book():
-    res = requests.get(f"{BASE_URL}/{book_id}")
+def test_get_book(posted_book):
+    res = requests.get(f"{BASE_URL}/{posted_book}")
     assert res.status_code == 200
     data = res.json()
-    assert data["title"] == "1984"
+    assert data["title"] == "Second Foundation"
 
-def test_delete_book():
-    res = requests.delete(f"{BASE_URL}/{book_id}")
+def test_delete_book(posted_book):
+    res = requests.delete(f"{BASE_URL}/{posted_book}")
     assert res.status_code == 200
 
-def test_get_deleted_book():
-    res = requests.get(f"{BASE_URL}/{book_id}")
+def test_get_deleted_book(posted_book):
+    res = requests.get(f"{BASE_URL}/{posted_book}")
     assert res.status_code == 404
