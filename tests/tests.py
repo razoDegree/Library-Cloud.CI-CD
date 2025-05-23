@@ -9,22 +9,26 @@ book = {
     "genre": "Science Fiction"
 }
 
-@pytest.fixture(scope="module")
-def posted_book():
+
+def test_get_books():
+    res = requests.get(f"{BASE_URL}")
+    assert res.status_code == 200
+    
+def test_posted_book():
     res = requests.post(BASE_URL, json=book)
     assert res.status_code == 201
-    return res.json()["id"]
+    return res.json()["book_id"]
 
-# def test_get_book(posted_book):
-#     res = requests.get(f"{BASE_URL}/{posted_book}")
-#     assert res.status_code == 200
-#     data = res.json()
-#     assert data["title"] == "Second Foundation"
+def test_get_book():
+    res = requests.get(f"{BASE_URL}/{book['ISBN']}")
+    assert res.status_code == 202
+    data = res.json()
+    assert data["title"] == "Second Foundation"
 
-# def test_delete_book(posted_book):
-#     res = requests.delete(f"{BASE_URL}/{posted_book}")
-#     assert res.status_code == 200
+def test2_delete_book():
+    res = requests.delete(f"{BASE_URL}/{book['ISBN']}")
+    assert res.status_code == 200
 
-# def test_get_deleted_book(posted_book):
-#     res = requests.get(f"{BASE_URL}/{posted_book}")
-#     assert res.status_code == 404
+def test_get_deleted_book():
+    res = requests.get(f"{BASE_URL}/{book['ISBN']}")
+    assert res.status_code == 404
