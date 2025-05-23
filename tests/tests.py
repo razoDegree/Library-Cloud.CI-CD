@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-BASE_URL = "http://localhost:5000/books"
+BASE_URL = "http://books:5001/books"
 
 book = {
     "title": "Second Foundation",
