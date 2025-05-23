@@ -18,17 +18,14 @@ jobs:
       - name: Record start time
         run: echo "Start Time:$(date -Iminutes)" > /tmp/log.txt
 
-      - name: Add submitter names to log
-        run: echo "Omer Yanay, Yuval Lapid" >> /tmp/log.txt
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
       - name: Build and export
         uses: docker/build-push-action@v5
         with:
-          context: ./bookapi
-          file: ./bookapi/Dockerfile
+          context: ./BooksService
+          file: ./BooksService/Dockerfile
           tags: books:latest
           outputs: type=docker,dest=/tmp/image.tar
 
