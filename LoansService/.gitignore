@@ -1,8 +1,0 @@
-__pycache__/
-libraryFunctions/apiTest.py
-libraryFunctions/Private.py
-*.pyc
-*.pyo
-*.pyd
-.env
-.vscode/
